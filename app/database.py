@@ -1,8 +1,9 @@
 import sqlite3
+import os
 from pathlib import Path
 from datetime import datetime
 
-DB_PATH = Path("kohvilogi.db")
+DB_PATH = Path(os.environ.get("DB_PATH", "kohvilogi.db"))
 
 
 def get_db():
@@ -37,7 +38,7 @@ def add_expense(item: str, amount: float, currency: str = "EUR", date: str = Non
         (item, amount, currency, date, notes, datetime.now().isoformat()),
     )
     conn.commit()
-    rowid = cur.lastrowid
+    rowid = cur.lastrowid or 0
     conn.close()
     return rowid
 
