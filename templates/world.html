@@ -2,111 +2,299 @@
 <html lang="et">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kohvilogi — Kohv maailmas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#065f46">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kohvilogi">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Kohvilogi">
+    <link rel="manifest" href="/manifest.json">
+    <title>Kohvilogi — Kaart</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        #map { height: 300px; border-radius: 0.75rem; }
-        .leaflet-container { background: #1f2937; }
+        * { -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; overflow: hidden; }
+        body { background: #111827; color: #e5e7eb; }
+        #map { position: absolute; top: 0; left: 0; right: 0; bottom: 60px; z-index: 1; }
+        .leaflet-container { background: #111827 !important; }
+        .coffee-popup .leaflet-popup-content-wrapper {
+            background: #1f2937; color: #e5e7eb; border-radius: 0.75rem;
+            border: 1px solid #374151; font-size: 13px;
+        }
+        .coffee-popup .leaflet-popup-tip { background: #1f2937; }
+        .coffee-popup .leaflet-popup-close-button { color: #9ca3af; }
+        .region-popup .leaflet-popup-content-wrapper {
+            background: #1a1a2e; color: #e5e7eb; border-radius: 0.75rem;
+            border: 1px solid #4a5568; font-size: 13px;
+        }
+        .region-popup .leaflet-popup-tip { background: #1a1a2e; }
+        .region-popup .leaflet-popup-close-button { color: #9ca3af; }
+        .leaflet-control-zoom a {
+            background: #1f2937 !important; color: #e5e7eb !important;
+            border-color: #374151 !important;
+        }
+        .leaflet-control-zoom a:hover { background: #374151 !important; }
+        .leaflet-control-attribution {
+            background: rgba(17,24,39,0.8) !important; color: #6b7280 !important;
+            font-size: 9px !important;
+        }
+        .leaflet-control-attribution a { color: #34d399 !important; }
+
+        /* Bottom nav */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+            background: #1f2937; border-top: 1px solid #374151;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .bottom-nav a {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 8px 0 4px; color: #6b7280; text-decoration: none; font-size: 10px;
+            transition: color 0.15s;
+        }
+        .bottom-nav a.active { color: #34d399; }
+        .bottom-nav a span.icon { font-size: 20px; line-height: 1; margin-bottom: 2px; }
+
+        /* Stats overlay */
+        .stats-bar {
+            position: fixed; top: 8px; left: 8px; right: 8px; z-index: 500;
+            display: flex; gap: 6px; pointer-events: none;
+        }
+        .stats-bar > div {
+            background: rgba(17,24,39,0.85); backdrop-filter: blur(8px);
+            border: 1px solid #374151; border-radius: 8px;
+            padding: 6px 10px; text-align: center; pointer-events: auto;
+        }
+        .stats-bar .num { color: #34d399; font-weight: 700; font-size: 14px; line-height: 1.2; }
+        .stats-bar .lbl { color: #6b7280; font-size: 9px; }
+
+        /* Layer toggles */
+        .layer-bar {
+            position: fixed; top: 56px; left: 8px; z-index: 500;
+            display: flex; gap: 4px;
+        }
+        .layer-btn {
+            background: rgba(17,24,39,0.85); backdrop-filter: blur(8px);
+            border: 1px solid #374151; border-radius: 6px;
+            padding: 4px 8px; font-size: 10px; color: #9ca3af;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .layer-btn.active { border-color: #34d399; color: #34d399; }
+
+        /* Legend */
+        .legend-box {
+            background: rgba(17,24,39,0.85); backdrop-filter: blur(8px);
+            border: 1px solid #374151; border-radius: 8px;
+            padding: 6px 10px; color: #9ca3af; font-size: 10px; line-height: 1.8;
+        }
+        .legend-box .dot {
+            display: inline-block; width: 8px; height: 8px;
+            border-radius: 50%; margin-right: 5px; vertical-align: middle;
+        }
+
+        /* Country list sheet */
+        .sheet-overlay {
+            display: none; position: fixed; inset: 0; z-index: 900;
+            background: rgba(0,0,0,0.5);
+        }
+        .sheet-overlay.open { display: block; }
+        .sheet {
+            position: fixed; bottom: 60px; left: 0; right: 0; z-index: 901;
+            background: #1f2937; border-top: 1px solid #374151;
+            border-radius: 16px 16px 0 0; max-height: 50vh; overflow-y: auto;
+            transform: translateY(100%); transition: transform 0.25s ease-out;
+        }
+        .sheet.open { transform: translateY(0); }
+        .sheet-handle {
+            width: 36px; height: 4px; background: #4b5563; border-radius: 2px;
+            margin: 8px auto;
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen">
-    <div class="max-w-md mx-auto p-4">
-        <div class="flex items-center justify-between mb-6">
-            <a href="/" class="text-emerald-400 hover:text-emerald-300">← Tagasi</a>
-            <h1 class="text-xl font-bold">🌍 Kohv maailmas</h1>
-            <div class="w-12"></div>
-        </div>
-
-        <!-- Stats cards -->
-        <div class="grid grid-cols-2 gap-3 mb-4">
-            <div class="bg-gray-800 rounded-xl p-3 text-center">
-                <p class="text-3xl font-bold text-emerald-400">{{ data.total_countries }}</p>
-                <p class="text-gray-400 text-xs">Riiki külastatud</p>
-            </div>
-            <div class="bg-gray-800 rounded-xl p-3 text-center">
-                <p class="text-3xl font-bold text-emerald-400">{{ data.total_drinks }}</p>
-                <p class="text-gray-400 text-xs">Kohvi joodud</p>
-            </div>
-        </div>
-
-        <!-- Map -->
-        {% if data.coordinates %}
-        <div id="map" class="mb-4"></div>
-        {% endif %}
-
-        <!-- Coffee passport — countries visited -->
-        {% if data.countries %}
-        <h2 class="text-lg font-semibold mb-3">🛂 Kohvipass</h2>
-        <div class="space-y-2 mb-6">
-            {% for c in data.countries %}
-            <div class="bg-gray-800 rounded-lg p-3">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="font-semibold">{{ c.country }}</p>
-                        <p class="text-gray-400 text-xs">
-                            {{ c.drink_count }} kohvi · {{ c.locations }} koht
-                            {% if c.first_visit %}· esimene: {{ c.first_visit }}{% endif %}
-                        </p>
-                    </div>
-                    <span class="text-2xl font-bold text-emerald-400">{{ c.drink_count }}x</span>
-                </div>
-                {% if c.coffee_types %}
-                <p class="text-gray-500 text-xs mt-1">☕ {{ c.coffee_types }}</p>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <!-- Timeline -->
-        {% if data.passport %}
-        <h2 class="text-lg font-semibold mb-3">📅 Ajajoon</h2>
-        <div class="space-y-1 mb-6">
-            {% for p in data.passport %}
-            <div class="bg-gray-800 rounded-lg px-3 py-2 flex justify-between items-center">
-                <span class="text-gray-300 text-sm">{{ p.first_drink }} — {{ p.country }}</span>
-                <span class="text-emerald-400 text-sm">{{ p.total }}x</span>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if not data.countries %}
-        <p class="text-gray-500 text-center mt-8">
-            Veel pole kohvi maailmas juuaud.<br>
-            <span class="text-sm">Lisa esimene kohv koos asukohaga!</span>
-        </p>
-        {% endif %}
+<body>
+    <!-- Stats bar -->
+    <div class="stats-bar">
+        <div><div class="num" id="stat-countries">·</div><div class="lbl">riiki</div></div>
+        <div><div class="num" id="stat-drinks">·</div><div class="lbl">kohvi</div></div>
+        <div><div class="num" id="stat-locations">·</div><div class="lbl">kohta</div></div>
     </div>
 
-    {% if data.coordinates %}
+    <!-- Layer toggles -->
+    <div class="layer-bar">
+        <button class="layer-btn active" id="btn-markers" onclick="toggleLayer('markers')">📍 Kohv</button>
+        <button class="layer-btn active" id="btn-regions" onclick="toggleLayer('regions')">🌱 Põllud</button>
+        <button class="layer-btn" id="btn-routes" onclick="toggleLayer('routes')">✈️ Rajad</button>
+    </div>
+
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- Country list sheet -->
+    <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+    <div class="sheet" id="sheet">
+        <div class="sheet-handle"></div>
+        <div class="px-4 pb-4">
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">📖 Riikide nimekiri</h3>
+            <div id="country-list" class="space-y-1 text-sm"></div>
+        </div>
+    </div>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav">
+        <div style="display:flex;justify-content:space-around;align-items:stretch;height:56px;">
+            <a href="/" class="flex-1">
+                <span class="icon">➕</span>
+                <span>Lisa</span>
+            </a>
+            <a href="/map" class="flex-1 active">
+                <span class="icon">🗺️</span>
+                <span>Kaart</span>
+            </a>
+            <a href="/stats" class="flex-1">
+                <span class="icon">📊</span>
+                <span>Stat</span>
+            </a>
+            <a href="#" class="flex-1" onclick="openSheet();return false;">
+                <span class="icon">📖</span>
+                <span>Riigid</span>
+            </a>
+        </div>
+    </nav>
+
     <script>
-    const map = L.map('map').setView([20, 0], 2);
+    const map = L.map('map', {
+        zoomControl: false,
+        attributionControl: true
+    }).setView([20, 0], 2);
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19
+        attribution: '&copy; OSM &copy; CARTO',
+        subdomains: 'abcd', maxZoom: 19
     }).addTo(map);
 
-    const coords = {{ data.coordinates | tojson }};
-    const markers = [];
-    coords.forEach(c => {
-        if (c.latitude && c.longitude) {
-            const marker = L.marker([c.latitude, c.longitude])
-                .bindPopup(`<b>${c.coffee_type || 'Kohv'}</b><br>${c.location || ''} (${c.country})<br><small>${c.date}</small>`)
-                .addTo(map);
-            markers.push(marker);
-        }
-    });
+    // Layer groups
+    const markersLayer = L.layerGroup().addTo(map);
+    const regionsLayer = L.layerGroup().addTo(map);
+    const routesLayer = L.layerGroup();
 
-    if (markers.length > 0) {
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds().pad(0.1));
+    function toggleLayer(name) {
+        const btn = document.getElementById('btn-' + name);
+        const layer = { markers: markersLayer, regions: regionsLayer, routes: routesLayer }[name];
+        if (map.hasLayer(layer)) { map.removeLayer(layer); btn.classList.remove('active'); }
+        else { map.addLayer(layer); btn.classList.add('active'); }
     }
+
+    // Sheet
+    function openSheet() {
+        document.getElementById('sheet').classList.add('open');
+        document.getElementById('sheet-overlay').classList.add('open');
+    }
+    function closeSheet() {
+        document.getElementById('sheet').classList.remove('open');
+        document.getElementById('sheet-overlay').classList.remove('open');
+    }
+
+    // Region icon
+    function regionIcon() {
+        return L.divIcon({
+            html: '<span style="font-size:12px;opacity:0.7">🌱</span>',
+            className: '', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -8]
+        });
+    }
+
+    // Load data
+    fetch('/api/world')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('stat-countries').textContent = data.total_countries || 0;
+            document.getElementById('stat-drinks').textContent = data.total_drinks || 0;
+
+            const allMarkers = [];
+            const uniqueLocations = new Set();
+
+            // Coffee markers
+            if (data.coordinates) {
+                data.coordinates.forEach(c => {
+                    if (c.latitude && c.longitude) {
+                        uniqueLocations.add(c.location || c.country);
+                        const marker = L.circleMarker([c.latitude, c.longitude], {
+                            radius: 6, fillColor: '#34d399', color: '#065f46',
+                            weight: 2, opacity: 1, fillOpacity: 0.85
+                        }).bindPopup(`
+                            <b>${c.coffee_type || 'Kohv'}</b><br>
+                            <span style="color:#9ca3af">${c.location || ''} (${c.country})</span><br>
+                            <small style="color:#6b7280">${c.date}</small>
+                        `, { className: 'coffee-popup' });
+                        markersLayer.addLayer(marker);
+                        allMarkers.push([c.latitude, c.longitude]);
+                    }
+                });
+            }
+            document.getElementById('stat-locations').textContent = uniqueLocations.size;
+
+            // Growing regions
+            if (data.regions) {
+                data.regions.forEach(r => {
+                    L.marker([r.lat, r.lon], { icon: regionIcon() })
+                        .bindPopup(`
+                            <b>🌱 ${r.name}</b><br>
+                            <span style="color:#9ca3af">${r.country} · ${r.type}</span><br>
+                            <span style="color:#d1d5db;font-size:12px">${r.desc}</span>
+                        `, { className: 'region-popup' })
+                        .addTo(regionsLayer);
+                });
+            }
+
+            // Routes
+            if (data.coordinates && data.coordinates.length > 1) {
+                const sorted = [...data.coordinates]
+                    .filter(c => c.latitude && c.longitude)
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                for (let i = 0; i < sorted.length - 1; i++) {
+                    const a = sorted[i], b = sorted[i + 1];
+                    if (a.country !== b.country) {
+                        L.polyline(
+                            [[a.latitude, a.longitude], [b.latitude, b.longitude]],
+                            { color: '#34d399', weight: 1.5, opacity: 0.35, dashArray: '4 6' }
+                        ).bindPopup(`<span style="color:#9ca3af;font-size:11px">${a.location||a.country} → ${b.location||b.country}</span>`, { className: 'coffee-popup' })
+                        .addTo(routesLayer);
+                    }
+                }
+            }
+
+            // Fit to markers
+            if (allMarkers.length > 0) {
+                map.fitBounds(L.latLngBounds(allMarkers).pad(0.15));
+            }
+
+            // Country list in sheet
+            const listEl = document.getElementById('country-list');
+            if (data.countries && data.countries.length > 0) {
+                data.countries.sort((a, b) => b.drink_count - a.drink_count);
+                data.countries.forEach(c => {
+                    const d = document.createElement('div');
+                    d.className = 'flex justify-between items-center py-1.5 border-b border-gray-700/50 last:border-0';
+                    d.innerHTML = `<span>${c.flag||'🏳️'} ${c.country_name||c.country}</span><span style="color:#34d399;font-weight:600">${c.drink_count}x</span>`;
+                    listEl.appendChild(d);
+                });
+            } else {
+                listEl.innerHTML = '<p class="text-gray-500 text-center py-4">Veel pole kohvi maailmas juuaud.<br><span style="font-size:12px">Lisa kohv koos asukohaga!</span></p>';
+            }
+        })
+        .catch(err => console.error('Failed:', err));
+
+    // Legend
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function() {
+        const d = L.DomUtil.create('div', 'legend-box');
+        d.innerHTML = '<div><span class="dot" style="background:#34d399"></span>Kohvikoht</div><div><span class="dot" style="background:#22c55e;opacity:0.5"></span>Viinapõld</div><div><span class="dot" style="background:#34d399;opacity:0.35"></span>Reisirada</div>';
+        return d;
+    };
+    legend.addTo(map);
     </script>
-    {% endif %}
 </body>
 </html>

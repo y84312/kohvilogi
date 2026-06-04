@@ -2,9 +2,31 @@
 <html lang="et">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#065f46">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kohvilogi">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
     <title>Kohvilogi — Aruanne</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+            background: #1f2937; border-top: 1px solid #374151;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .bottom-nav a {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 8px 0 4px; color: #6b7280; text-decoration: none; font-size: 10px;
+            transition: color 0.15s;
+        }
+        .bottom-nav a.active { color: #34d399; }
+        .bottom-nav a span.icon { font-size: 20px; line-height: 1; margin-bottom: 2px; }
+    </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
     <div class="max-w-md mx-auto p-4">
@@ -14,14 +36,12 @@
             <div class="w-12"></div>
         </div>
 
-        <!-- Month selector -->
         <form method="get" action="/stats" class="mb-6 flex gap-2">
             <input type="month" name="month" value="{{ month }}"
-                class="flex-1 bg-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2 font-semibold transition">Vaata</button>
+                class="flex-1 bg-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-lg px-4 py-2.5 font-semibold transition">Vaata</button>
         </form>
 
-        <!-- Total by currency -->
         {% if data.by_currency %}
         <div class="bg-gray-800 rounded-xl p-4 mb-4">
             <h2 class="text-sm text-gray-400 mb-2">Kokku kuus</h2>
@@ -34,7 +54,6 @@
         </div>
         {% endif %}
 
-        <!-- Favorite coffees -->
         {% if data.favorites %}
         <div class="bg-gray-800 rounded-xl p-4 mb-4">
             <h2 class="text-sm text-gray-400 mb-2">Lemmikud</h2>
@@ -47,7 +66,6 @@
         </div>
         {% endif %}
 
-        <!-- Coffee type breakdown -->
         {% if data.by_type %}
         <div class="bg-gray-800 rounded-xl p-4 mb-4">
             <h2 class="text-sm text-gray-400 mb-2">Kohvitüübid</h2>
@@ -60,7 +78,6 @@
         </div>
         {% endif %}
 
-        <!-- Daily breakdown -->
         {% if data.daily %}
         <div class="bg-gray-800 rounded-xl p-4 mb-4">
             <h2 class="text-sm text-gray-400 mb-2">Päevaraamat</h2>
@@ -77,5 +94,23 @@
         <p class="text-gray-500 text-center mt-8">Sellel kuul pole veel kohvi logitud.</p>
         {% endif %}
     </div>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav">
+        <div style="display:flex;justify-content:space-around;align-items:stretch;height:56px;">
+            <a href="/" class="flex-1">
+                <span class="icon">➕</span>
+                <span>Lisa</span>
+            </a>
+            <a href="/map" class="flex-1">
+                <span class="icon">🗺️</span>
+                <span>Kaart</span>
+            </a>
+            <a href="/stats" class="flex-1 active">
+                <span class="icon">📊</span>
+                <span>Stat</span>
+            </a>
+        </div>
+    </nav>
 </body>
 </html>

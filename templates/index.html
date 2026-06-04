@@ -2,9 +2,31 @@
 <html lang="et">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#065f46">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kohvilogi">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
     <title>Kohvilogi</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+            background: #1f2937; border-top: 1px solid #374151;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .bottom-nav a {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 8px 0 4px; color: #6b7280; text-decoration: none; font-size: 10px;
+            transition: color 0.15s;
+        }
+        .bottom-nav a.active { color: #34d399; }
+        .bottom-nav a span.icon { font-size: 20px; line-height: 1; margin-bottom: 2px; }
+    </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
     <div class="max-w-md mx-auto p-4">
@@ -25,7 +47,7 @@
         <!-- Add form -->
         <form method="post" action="/add" class="bg-gray-800 rounded-xl p-4 mb-6 space-y-3">
             <select name="coffee_type" required
-                class="w-full bg-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                class="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <option value="" disabled selected>Vali kohvi tüüp</option>
                 {% for ct in coffee_types %}
                 <option value="{{ ct }}">{{ ct }}</option>
@@ -33,32 +55,30 @@
             </select>
             <div class="flex gap-2">
                 <input type="text" name="amount" placeholder="3.50" required pattern="[0-9]+([,.][0-9]+)?"
-                    class="flex-1 bg-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                <select name="currency" class="bg-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    class="flex-1 bg-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <select name="currency" class="bg-gray-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     {% for code, symbol in currencies %}
                     <option value="{{ code }}" {% if code == 'EUR' %}selected{% endif %}>{{ code }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <!-- Location fields -->
             <div class="flex gap-2">
                 <input type="text" name="location" placeholder="Linn/koht (nt Zürich)" list="location-list"
-                    class="flex-1 bg-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    class="flex-1 bg-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <input type="text" name="country" placeholder="Riik (nt CH)" list="country-list" maxlength="2"
-                    class="w-20 bg-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase">
+                    class="w-20 bg-gray-700 rounded-lg px-3 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase">
             </div>
             <datalist id="country-list">
                 {% for code, name, flag in countries %}
                 <option value="{{ code }}">{{ flag }} {{ name }}</option>
                 {% endfor %}
             </datalist>
-            <datalist id="location-list">
-            </datalist>
+            <datalist id="location-list"></datalist>
             <input type="hidden" name="latitude" id="latitude" value="0">
             <input type="hidden" name="longitude" id="longitude" value="0">
             <input type="text" name="notes" placeholder="Märkmed (valikuline)"
-                class="w-full bg-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2 font-semibold transition">Lisa ☕</button>
+                class="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-lg py-2.5 font-semibold transition">Lisa ☕</button>
         </form>
 
         <!-- Today's expenses -->
@@ -97,21 +117,32 @@
             {% endfor %}
         </div>
         {% endif %}
-
-        <!-- Navigation -->
-        <div class="mt-6 text-center space-x-4">
-            <a href="/stats" class="text-emerald-400 hover:text-emerald-300 text-sm underline">📊 Kuu aruanne</a>
-            <a href="/world" class="text-emerald-400 hover:text-emerald-300 text-sm underline">🌍 Kohv maailmas</a>
-        </div>
     </div>
 
-    <!-- Geocoding: when user types a location, try to get coordinates -->
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav">
+        <div style="display:flex;justify-content:space-around;align-items:stretch;height:56px;">
+            <a href="/" class="flex-1 active">
+                <span class="icon">➕</span>
+                <span>Lisa</span>
+            </a>
+            <a href="/map" class="flex-1">
+                <span class="icon">🗺️</span>
+                <span>Kaart</span>
+            </a>
+            <a href="/stats" class="flex-1">
+                <span class="icon">📊</span>
+                <span>Stat</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Geocoding -->
     <script>
     const locationInput = document.querySelector('input[name="location"]');
     const latInput = document.getElementById('latitude');
     const lonInput = document.getElementById('longitude');
     let debounce = null;
-
     locationInput.addEventListener('change', function() {
         const loc = this.value.trim();
         if (!loc) return;
