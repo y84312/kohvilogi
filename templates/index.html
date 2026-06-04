@@ -13,25 +13,36 @@
         <!-- Today's total -->
         <div class="bg-gray-800 rounded-xl p-4 mb-6 text-center">
             <p class="text-gray-400 text-sm">Täna kokku</p>
-            <p class="text-3xl font-bold text-emerald-400">{{ "%.2f"|format(total) }} €</p>
+            {% if totals %}
+                {% for currency, total in totals.items() %}
+                <p class="text-2xl font-bold text-emerald-400">{{ "%.2f"|format(total) }} {{ currency }}</p>
+                {% endfor %}
+            {% else %}
+                <p class="text-2xl font-bold text-gray-500">0.00 €</p>
+            {% endif %}
         </div>
 
         <!-- Add form -->
         <form method="post" action="/add" class="bg-gray-800 rounded-xl p-4 mb-6 space-y-3">
-            <input type="text" name="item" placeholder="Mida? (nt latte)" required
-                class="w-full bg-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <select name="coffee_type" required
+                class="w-full bg-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option value="" disabled selected>Vali kohvi tüüp</option>
+                {% for ct in coffee_types %}
+                <option value="{{ ct }}">{{ ct }}</option>
+                {% endfor %}
+            </select>
             <div class="flex gap-2">
                 <input type="text" name="amount" placeholder="3.50" required pattern="[0-9]+([,.][0-9]+)?"
                     class="flex-1 bg-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <select name="currency" class="bg-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="EUR">€</option>
-                    <option value="USD">$</option>
-                    <option value="GBP">£</option>
+                    {% for code, symbol in currencies %}
+                    <option value="{{ code }}" {% if code == 'EUR' %}selected{% endif %}>{{ code }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <input type="text" name="notes" placeholder="Märkmed (valikuline)"
                 class="w-full bg-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2 font-semibold transition">Lisa</button>
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2 font-semibold transition">Lisa ☕</button>
         </form>
 
         <!-- Today's expenses -->
@@ -41,7 +52,7 @@
             {% for e in expenses %}
             <div class="bg-gray-800 rounded-lg p-3 flex justify-between items-center">
                 <div>
-                    <p class="font-medium">{{ e.item }}</p>
+                    <p class="font-medium">{{ e.coffee_type or e.item }}</p>
                     {% if e.notes %}<p class="text-gray-400 text-sm">{{ e.notes }}</p>{% endif %}
                 </div>
                 <div class="flex items-center gap-3">
@@ -54,21 +65,26 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-gray-500 text-center mb-6">Täna pole veel midagi lisatud.</p>
+        <p class="text-gray-500 text-center mb-6">Täna pole veel kohvi juuaud.</p>
         {% endif %}
 
-        <!-- 7-day summary -->
+        <!-- Summary -->
         {% if summary %}
-        <h2 class="text-lg font-semibold mb-3">Viimased 7 päeva</h2>
+        <h2 class="text-lg font-semibold mb-3">Viimased päevad</h2>
         <div class="space-y-2">
             {% for s in summary %}
             <div class="bg-gray-800 rounded-lg p-3 flex justify-between">
                 <span class="text-gray-300">{{ s.date }}</span>
-                <span class="text-emerald-400 font-semibold">{{ "%.2f"|format(s.total) }} €</span>
+                <span class="text-emerald-400 font-semibold">{{ "%.2f"|format(s.total) }} {{ s.currency }} ({{ s.count }}x)</span>
             </div>
             {% endfor %}
         </div>
         {% endif %}
+
+        <!-- Stats link -->
+        <div class="mt-6 text-center">
+            <a href="/stats" class="text-emerald-400 hover:text-emerald-300 text-sm underline">📊 Kuu aruanne</a>
+        </div>
     </div>
 </body>
 </html>
