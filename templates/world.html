@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kohvilogi — Kohv maailmas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 300px; border-radius: 0.75rem; }
+        .leaflet-container { background: #1f2937; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <div class="max-w-md mx-auto p-4">
+        <div class="flex items-center justify-between mb-6">
+            <a href="/" class="text-emerald-400 hover:text-emerald-300">← Tagasi</a>
+            <h1 class="text-xl font-bold">🌍 Kohv maailmas</h1>
+            <div class="w-12"></div>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="bg-gray-800 rounded-xl p-3 text-center">
+                <p class="text-3xl font-bold text-emerald-400">{{ data.total_countries }}</p>
+                <p class="text-gray-400 text-xs">Riiki külastatud</p>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-3 text-center">
+                <p class="text-3xl font-bold text-emerald-400">{{ data.total_drinks }}</p>
+                <p class="text-gray-400 text-xs">Kohvi joodud</p>
+            </div>
+        </div>
+
+        <!-- Map -->
+        {% if data.coordinates %}
+        <div id="map" class="mb-4"></div>
+        {% endif %}
+
+        <!-- Coffee passport — countries visited -->
+        {% if data.countries %}
+        <h2 class="text-lg font-semibold mb-3">🛂 Kohvipass</h2>
+        <div class="space-y-2 mb-6">
+            {% for c in data.countries %}
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-semibold">{{ c.country }}</p>
+                        <p class="text-gray-400 text-xs">
+                            {{ c.drink_count }} kohvi · {{ c.locations }} koht
+                            {% if c.first_visit %}· esimene: {{ c.first_visit }}{% endif %}
+                        </p>
+                    </div>
+                    <span class="text-2xl font-bold text-emerald-400">{{ c.drink_count }}x</span>
+                </div>
+                {% if c.coffee_types %}
+                <p class="text-gray-500 text-xs mt-1">☕ {{ c.coffee_types }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Timeline -->
+        {% if data.passport %}
+        <h2 class="text-lg font-semibold mb-3">📅 Ajajoon</h2>
+        <div class="space-y-1 mb-6">
+            {% for p in data.passport %}
+            <div class="bg-gray-800 rounded-lg px-3 py-2 flex justify-between items-center">
+                <span class="text-gray-300 text-sm">{{ p.first_drink }} — {{ p.country }}</span>
+                <span class="text-emerald-400 text-sm">{{ p.total }}x</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if not data.countries %}
+        <p class="text-gray-500 text-center mt-8">
+            Veel pole kohvi maailmas juuaud.<br>
+            <span class="text-sm">Lisa esimene kohv koos asukohaga!</span>
+        </p>
+        {% endif %}
+    </div>
+
+    {% if data.coordinates %}
+    <script>
+    const map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(map);
+
+    const coords = {{ data.coordinates | tojson }};
+    const markers = [];
+    coords.forEach(c => {
+        if (c.latitude && c.longitude) {
+            const marker = L.marker([c.latitude, c.longitude])
+                .bindPopup(`<b>${c.coffee_type || 'Kohv'}</b><br>${c.location || ''} (${c.country})<br><small>${c.date}</small>`)
+                .addTo(map);
+            markers.push(marker);
+        }
+    });
+
+    if (markers.length > 0) {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+    </script>
+    {% endif %}
+</body>
+</html>

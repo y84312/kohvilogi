@@ -40,6 +40,22 @@
                     {% endfor %}
                 </select>
             </div>
+            <!-- Location fields -->
+            <div class="flex gap-2">
+                <input type="text" name="location" placeholder="Linn/koht (nt Zürich)" list="location-list"
+                    class="flex-1 bg-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <input type="text" name="country" placeholder="Riik (nt CH)" list="country-list" maxlength="2"
+                    class="w-20 bg-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase">
+            </div>
+            <datalist id="country-list">
+                {% for code, name, flag in countries %}
+                <option value="{{ code }}">{{ flag }} {{ name }}</option>
+                {% endfor %}
+            </datalist>
+            <datalist id="location-list">
+            </datalist>
+            <input type="hidden" name="latitude" id="latitude" value="0">
+            <input type="hidden" name="longitude" id="longitude" value="0">
             <input type="text" name="notes" placeholder="Märkmed (valikuline)"
                 class="w-full bg-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2 font-semibold transition">Lisa ☕</button>
@@ -53,6 +69,7 @@
             <div class="bg-gray-800 rounded-lg p-3 flex justify-between items-center">
                 <div>
                     <p class="font-medium">{{ e.coffee_type or e.item }}</p>
+                    {% if e.location %}<p class="text-gray-400 text-xs">📍 {{ e.location }}{% if e.country %} ({{ e.country }}){% endif %}</p>{% endif %}
                     {% if e.notes %}<p class="text-gray-400 text-sm">{{ e.notes }}</p>{% endif %}
                 </div>
                 <div class="flex items-center gap-3">
@@ -81,10 +98,38 @@
         </div>
         {% endif %}
 
-        <!-- Stats link -->
-        <div class="mt-6 text-center">
+        <!-- Navigation -->
+        <div class="mt-6 text-center space-x-4">
             <a href="/stats" class="text-emerald-400 hover:text-emerald-300 text-sm underline">📊 Kuu aruanne</a>
+            <a href="/world" class="text-emerald-400 hover:text-emerald-300 text-sm underline">🌍 Kohv maailmas</a>
         </div>
     </div>
+
+    <!-- Geocoding: when user types a location, try to get coordinates -->
+    <script>
+    const locationInput = document.querySelector('input[name="location"]');
+    const latInput = document.getElementById('latitude');
+    const lonInput = document.getElementById('longitude');
+    let debounce = null;
+
+    locationInput.addEventListener('change', function() {
+        const loc = this.value.trim();
+        if (!loc) return;
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc)}&limit=1`, {
+                headers: { 'User-Agent': 'Kohvilogi/1.0' }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data[0]) {
+                        latInput.value = data[0].lat;
+                        lonInput.value = data[0].lon;
+                    }
+                })
+                .catch(() => {});
+        }, 500);
+    });
+    </script>
 </body>
 </html>

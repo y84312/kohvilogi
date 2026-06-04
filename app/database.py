@@ -26,20 +26,41 @@ def init_db():
             currency TEXT DEFAULT 'EUR',
             date TEXT NOT NULL,
             notes TEXT DEFAULT '',
+            location TEXT DEFAULT '',
+            country TEXT DEFAULT '',
+            latitude REAL DEFAULT 0,
+            longitude REAL DEFAULT 0,
             created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS coffee_countries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            country_code TEXT NOT NULL UNIQUE,
+            country_name TEXT NOT NULL,
+            coffee_type TEXT DEFAULT '',
+            first_drink_date TEXT DEFAULT '',
+            drink_count INTEGER DEFAULT 0,
+            flag_emoji TEXT DEFAULT '',
+            notes TEXT DEFAULT ''
         )
     """)
     conn.commit()
     conn.close()
 
 
-def add_expense(item: str, amount: float, currency: str = "EUR", coffee_type: str = "", date: str | None = None, notes: str = "") -> int:
+def add_expense(item: str, amount: float, currency: str = "EUR", coffee_type: str = "",
+                date: str | None = None, notes: str = "",
+                location: str = "", country: str = "",
+                latitude: float = 0, longitude: float = 0) -> int:
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d")
     conn = get_db()
     cur = conn.execute(
-        "INSERT INTO expenses (item, coffee_type, amount, currency, date, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (item, coffee_type, amount, currency, date, notes, datetime.now().isoformat()),
+        """INSERT INTO expenses
+           (item, coffee_type, amount, currency, date, notes, location, country, latitude, longitude, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (item, coffee_type, amount, currency, date, notes, location, country, latitude, longitude, datetime.now().isoformat()),
     )
     conn.commit()
     rowid = cur.lastrowid or 0
@@ -96,25 +117,21 @@ def delete_expense(expense_id: int) -> bool:
 def get_monthly_stats(year_month: str) -> dict:
     """Return monthly stats: total by currency, favorite coffee, daily breakdown."""
     conn = get_db()
-    # Total by currency
     currency_rows = conn.execute(
         "SELECT currency, COALESCE(SUM(amount), 0) as total, COUNT(*) as count FROM expenses WHERE strftime('%Y-%m', date) = ? GROUP BY currency",
         (year_month,),
     ).fetchall()
 
-    # Favorite coffee type
     fav_rows = conn.execute(
         "SELECT coffee_type, COUNT(*) as cnt FROM expenses WHERE strftime('%Y-%m', date) = ? AND coffee_type != '' GROUP BY coffee_type ORDER BY cnt DESC LIMIT 3",
         (year_month,),
     ).fetchall()
 
-    # Daily breakdown
     daily_rows = conn.execute(
         "SELECT date, COUNT(*) as count, SUM(amount) as total FROM expenses WHERE strftime('%Y-%m', date) = ? AND currency = 'EUR' GROUP BY date ORDER BY date",
         (year_month,),
     ).fetchall()
 
-    # Coffee type breakdown
     type_rows = conn.execute(
         "SELECT coffee_type, COUNT(*) as count, SUM(amount) as total FROM expenses WHERE strftime('%Y-%m', date) = ? AND currency = 'EUR' AND coffee_type != '' GROUP BY coffee_type ORDER BY count DESC",
         (year_month,),
@@ -127,3 +144,87 @@ def get_monthly_stats(year_month: str) -> dict:
         "daily": [dict(r) for r in daily_rows],
         "by_type": [{"type": r["coffee_type"], "count": r["count"], "total": r["total"]} for r in type_rows],
     }
+
+
+def get_world_stats() -> dict:
+    """Return world travel/coffee stats for the game."""
+    conn = get_db()
+
+    # Unique countries visited
+    country_rows = conn.execute(
+        """SELECT country, COUNT(*) as drink_count,
+                  COUNT(DISTINCT location) as locations,
+                  MIN(date) as first_visit, MAX(date) as last_visit,
+                  GROUP_CONCAT(DISTINCT coffee_type) as coffee_types
+           FROM expenses
+           WHERE country != ''
+           GROUP BY country
+           ORDER BY drink_count DESC""",
+    ).fetchall()
+
+    # Total unique countries
+    total_countries = conn.execute(
+        "SELECT COUNT(DISTINCT country) as cnt FROM expenses WHERE country != ''"
+    ).fetchone()["cnt"]
+
+    # Total drinks
+    total_drinks = conn.execute(
+        "SELECT COUNT(*) as cnt FROM expenses"
+    ).fetchone()["cnt"]
+
+    # Countries with coordinates for map
+    coord_rows = conn.execute(
+        """SELECT country, location, latitude, longitude, coffee_type, date, notes
+           FROM expenses
+           WHERE latitude != 0 AND longitude != 0
+           ORDER BY date DESC
+           LIMIT 200""",
+    ).fetchall()
+
+    # Coffee passport — all countries sorted by first drink
+    passport_rows = conn.execute(
+        """SELECT country, MIN(date) as first_drink, COUNT(*) as total,
+                  GROUP_CONCAT(DISTINCT coffee_type) as types
+           FROM expenses WHERE country != ''
+           GROUP BY country
+           ORDER BY first_drink""",
+    ).fetchall()
+
+    conn.close()
+
+    return {
+        "countries": [dict(r) for r in country_rows],
+        "total_countries": total_countries or 0,
+        "total_drinks": total_drinks or 0,
+        "coordinates": [dict(r) for r in coord_rows],
+        "passport": [dict(r) for r in passport_rows],
+    }
+
+
+def upsert_coffee_country(country_code: str, country_name: str, flag_emoji: str = "", coffee_type: str = "", notes: str = "") -> int:
+    """Add or update a country in the coffee passport."""
+    conn = get_db()
+    existing = conn.execute("SELECT id FROM coffee_countries WHERE country_code = ?", (country_code.upper(),)).fetchone()
+    if existing:
+        conn.execute(
+            "UPDATE coffee_countries SET country_name = ?, flag_emoji = ?, coffee_type = ?, notes = ? WHERE country_code = ?",
+            (country_name, flag_emoji, coffee_type, notes, country_code.upper()),
+        )
+        rowid = existing["id"]
+    else:
+        cur = conn.execute(
+            "INSERT INTO coffee_countries (country_code, country_name, flag_emoji, coffee_type, notes) VALUES (?, ?, ?, ?, ?)",
+            (country_code.upper(), country_name, flag_emoji, coffee_type, notes),
+        )
+        rowid = cur.lastrowid or 0
+    conn.commit()
+    conn.close()
+    return rowid
+
+
+def get_coffee_countries() -> list:
+    """Get all countries in the coffee passport."""
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM coffee_countries ORDER BY country_name").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
