@@ -356,3 +356,80 @@ async def api_world():
         p["country_name"] = info.get("name", p["country"])
     data["regions"] = COFFEE_REGIONS
     return data
+
+
+@app.get("/api/world/top3")
+async def api_world_top3():
+    """Top 3 coffee types per country."""
+    from app.database import get_db
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT country, coffee_type, COUNT(*) as cnt
+        FROM expenses
+        WHERE country != '' AND coffee_type != ''
+        GROUP BY country, coffee_type
+        ORDER BY country, cnt DESC
+    """).fetchall()
+    conn.close()
+
+    result = {}
+    for r in rows:
+        cc = r["country"]
+        if cc not in result:
+            result[cc] = []
+        if len(result[cc]) < 3:
+            result[cc].append({"type": r["coffee_type"], "count": r["cnt"]})
+
+    # Enrich with flags/names
+    for cc in result:
+        info = COUNTRY_INFO.get(cc, {})
+        result[cc] = {
+            "coffees": result[cc],
+            "flag": info.get("flag", "🏳️"),
+            "country_name": info.get("name", cc),
+        }
+
+    return result
+
+
+@app.get("/api/world/by-year")
+async def api_world_by_year():
+    """Coffee counts by year and country."""
+    from app.database import get_db
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT strftime('%Y', date) as year, country, COUNT(*) as cnt
+        FROM expenses
+        WHERE country != ''
+        GROUP BY year, country
+        ORDER BY year, cnt DESC
+    """).fetchall()
+    conn.close()
+
+    result = {}
+    for r in rows:
+        y = r["year"]
+        if y not in result:
+            result[y] = {"countries": [], "total": 0}
+        result[y]["countries"].append({
+            "country": r["country"],
+            "count": r["cnt"],
+            **COUNTRY_INFO.get(r["country"], {"flag": "🏳️", "name": r["country"]}),
+        })
+        result[y]["total"] += r["cnt"]
+
+    return result
+
+
+@app.get("/api/share")
+async def api_share():
+    """Shareable summary for QR code / link."""
+    stats = await api_stats()
+    import json
+    from base64 import b64encode
+    payload = b64encode(json.dumps(stats).encode()).decode()
+    return {
+        **stats,
+        "share_url": f"/share/{payload}",
+        "text": f"☕ Kohvilogi: {stats['total_drinks']} kohvi, {stats['unique_countries']} riiki, {stats['streak']} päeva streak!",
+    }

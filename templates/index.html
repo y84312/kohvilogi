@@ -163,6 +163,10 @@
     });
     </script>
     <script>
+    // Haptic feedback on add
+    document.querySelector('form[action="/add"]').addEventListener('submit', function() {
+        if (navigator.vibrate) navigator.vibrate(15);
+    });
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }

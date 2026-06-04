@@ -160,3 +160,64 @@ class TestPWA:
         r = client.get("/sw.js")
         assert r.status_code == 200
         assert "addEventListener" in r.text
+
+
+class TestNewEndpoints:
+    def test_health(self, client):
+        r = client.get("/health")
+        assert r.status_code == 200
+        d = r.json()
+        assert d["status"] == "ok"
+        assert d["app"] == "kohvilogi"
+        assert "version" in d
+
+    def test_api_stats(self, client):
+        r = client.get("/api/stats")
+        assert r.status_code == 200
+        d = r.json()
+        assert "streak" in d
+        assert "total_drinks" in d
+        assert "unique_countries" in d
+        assert "world_progress" in d
+        assert "week_drinks" in d
+
+    def test_api_world_top3_empty(self, client):
+        r = client.get("/api/world/top3")
+        assert r.status_code == 200
+        assert r.json() == {}
+
+    def test_api_world_top3_with_data(self, client):
+        client.post("/add", data={"coffee_type": "Espresso", "amount": "3.50", "country": "EE"})
+        client.post("/add", data={"coffee_type": "Espresso", "amount": "3.50", "country": "EE"})
+        client.post("/add", data={"coffee_type": "Latte", "amount": "4.00", "country": "EE"})
+        client.post("/add", data={"coffee_type": "Cappuccino", "amount": "4.00", "country": "FI"})
+        r = client.get("/api/world/top3")
+        d = r.json()
+        assert "EE" in d
+        assert "FI" in d
+        assert len(d["EE"]["coffees"]) == 2  # Espresso and Latte
+        assert d["EE"]["coffees"][0]["type"] == "Espresso"  # Most common first
+        assert d["EE"]["coffees"][0]["count"] == 2
+
+    def test_api_world_by_year_empty(self, client):
+        r = client.get("/api/world/by-year")
+        assert r.status_code == 200
+        assert r.json() == {}
+
+    def test_api_world_by_year_with_data(self, client):
+        client.post("/add", data={"coffee_type": "Espresso", "amount": "3.50", "country": "EE"})
+        r = client.get("/api/world/by-year")
+        d = r.json()
+        import datetime
+        year = str(datetime.date.today().year)
+        assert year in d
+        assert d[year]["total"] >= 1
+
+    def test_api_share(self, client):
+        r = client.get("/api/share")
+        assert r.status_code == 200
+        d = r.json()
+        assert "text" in d
+        assert "share_url" in d
+        assert "total_drinks" in d
+        assert "☕" in d["text"]

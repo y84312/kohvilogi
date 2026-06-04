@@ -132,6 +132,19 @@
             padding: 10px; font-size: 13px; width: 100%; margin-top: 4px;
         }
         .modal .loc-hint { color: #6b7280; font-size: 11px; margin-top: 4px; }
+
+        /* Year picker */
+        .year-opt {
+            padding: 6px 12px; color: #d1d5db; font-size: 12px;
+            cursor: pointer; border-radius: 4px; white-space: nowrap;
+        }
+        .year-opt:hover { background: #374151; }
+        .year-opt.sel { color: #34d399; }
+
+        /* QR modal */
+        .qr-modal { text-align: center; }
+        .qr-modal canvas { margin: 12px auto; border-radius: 8px; }
+        .qr-share-text { font-size: 12px; color: #9ca3af; word-break: break-all; margin: 8px 0; }
     </style>
 </head>
 <body>
@@ -142,11 +155,17 @@
         <div><div class="num" id="stat-progress">·</div><div class="lbl">maailmast</div></div>
     </div>
 
-    <!-- Layer toggles -->
+    <!-- Layer toggles + year filter -->
     <div class="layer-bar">
         <button class="layer-btn active" id="btn-markers" onclick="toggleLayer('markers')">📍 Kohv</button>
         <button class="layer-btn active" id="btn-regions" onclick="toggleLayer('regions')">🌱 Põllud</button>
         <button class="layer-btn" id="btn-routes" onclick="toggleLayer('routes')">✈️ Rajad</button>
+        <div style="position:relative;">
+            <button class="layer-btn" id="btn-year" onclick="toggleYearPicker()">📅 <span id="year-label">Kõik</span></button>
+            <div id="year-picker" style="display:none;position:absolute;top:100%;left:0;background:#1f2937;border:1px solid #374151;border-radius:8px;padding:4px;z-index:600;min-width:80px;">
+                <div class="year-opt" onclick="setYear('all')">Kõik</div>
+            </div>
+        </div>
     </div>
 
     <!-- Map -->
@@ -231,8 +250,24 @@
                 <span class="icon">📖</span>
                 <span>Riigid</span>
             </a>
+            <a href="#" class="flex-1" onclick="openQR();return false;">
+                <span class="icon">🔗</span>
+                <span>Jaga</span>
+            </a>
         </div>
     </nav>
+
+    <!-- QR Share modal -->
+    <div class="modal-overlay" id="qr-overlay" onclick="closeQR(event)">
+        <div class="modal qr-modal" onclick="event.stopPropagation()">
+            <div class="modal-handle"></div>
+            <h3 class="text-base font-bold text-emerald-400 mb-1">📤 Jaga oma kohvipassi</h3>
+            <canvas id="qr-canvas" width="200" height="200"></canvas>
+            <p class="qr-share-text" id="qr-text"></p>
+            <button class="btn-primary" onclick="copyShareLink()">Kopeeri link</button>
+            <button class="btn-cancel" onclick="closeQR()">Sulge</button>
+        </div>
+    </div>
 
     <script>
     // Service Worker
@@ -346,6 +381,8 @@
                     }
                 });
             }
+            // Store for year filtering
+            if (data.coordinates) storeMarkersData(data.coordinates);
             document.getElementById('stat-locations').textContent = uniqueLocations.size;
 
             if (data.regions) {
@@ -412,6 +449,132 @@
         return d;
     };
     legend.addTo(map);
+
+    // === Year filter ===
+    let allMarkersData = [];
+    let currentYear = 'all';
+
+    function toggleYearPicker() {
+        const p = document.getElementById('year-picker');
+        p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function setYear(y) {
+        currentYear = y;
+        document.getElementById('year-label').textContent = y === 'all' ? 'Kõik' : y;
+        document.getElementById('year-picker').style.display = 'none';
+        // Update year picker selection
+        document.querySelectorAll('.year-opt').forEach(el => {
+            el.classList.toggle('sel', el.textContent.trim() === (y === 'all' ? 'Kõik' : y));
+        });
+        filterMarkersByYear();
+    }
+
+    function filterMarkersByYear() {
+        markersLayer.clearLayers();
+        allMarkersData.forEach(m => {
+            if (currentYear === 'all' || m.date.startsWith(currentYear)) {
+                const marker = L.circleMarker([m.lat, m.lon], {
+                    radius: 6, fillColor: '#34d399', color: '#065f46',
+                    weight: 2, opacity: 1, fillOpacity: 0.85
+                }).bindPopup(`<b>${m.coffee_type}</b><br><span style="color:#9ca3af">${m.location} (${m.country})</span><br><small style="color:#6b7280">${m.date}</small>`, { className: 'coffee-popup' });
+                markersLayer.addLayer(marker);
+            }
+        });
+    }
+
+    // === Haptic feedback ===
+    function haptic() {
+        if (navigator.vibrate) navigator.vibrate(15);
+    }
+
+    // Hook into add form submit
+    document.getElementById('add-form').addEventListener('submit', haptic);
+
+    // === QR Share ===
+    let shareUrl = '';
+    async function openQR() {
+        haptic();
+        const r = await fetch('/api/share');
+        const d = await r.json();
+        shareUrl = window.location.origin + d.share_url;
+        document.getElementById('qr-text').textContent = d.text;
+        document.getElementById('qr-overlay').classList.add('open');
+        // Simple QR code using API
+        const canvas = document.getElementById('qr-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(0, 0, 200, 200);
+        // Use qrserver.com API for QR
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&bgcolor=1f2937&color=34d399`;
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0, 200, 200);
+        };
+    }
+    function closeQR(e) {
+        if (!e || e.target === document.getElementById('qr-overlay') || e.target.classList.contains('btn-cancel')) {
+            document.getElementById('qr-overlay').classList.remove('open');
+        }
+    }
+    function copyShareLink() {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            haptic();
+            const btn = document.querySelector('#qr-overlay .btn-primary');
+            btn.textContent = 'Kopeeritud!';
+            setTimeout(() => btn.textContent = 'Kopeeri link', 1500);
+        });
+    }
+
+    // === Top 3 coffees per country (shown in sheet) ===
+    async function loadTop3() {
+        try {
+            const r = await fetch('/api/world/top3');
+            const data = await r.json();
+            const listEl = document.getElementById('country-list');
+            if (Object.keys(data).length > 0) {
+                let html = '';
+                for (const [cc, info] of Object.entries(data)) {
+                    html += `<div style="padding:8px 0;border-bottom:1px solid #374151;">`;
+                    html += `<div style="font-weight:600;color:#e5e7eb;margin-bottom:4px;">${info.flag} ${info.country_name} <span style="color:#6b7280;font-size:11px">(${cc})</span></div>`;
+                    info.coffees.forEach((c, i) => {
+                        const medal = ['🥇','🥈','🥉'][i] || '•';
+                        html += `<div style="color:#9ca3af;font-size:12px;padding:2px 0;">${medal} ${c.type} <span style="color:#34d399">×${c.count}</span></div>`;
+                    });
+                    html += '</div>';
+                }
+                listEl.innerHTML = html;
+            }
+        } catch(e) {}
+    }
+    loadTop3();
+
+    // === Year data for filter ===
+    async function loadYearData() {
+        try {
+            const r = await fetch('/api/world/by-year');
+            const data = await r.json();
+            const picker = document.getElementById('year-picker');
+            // Keep "Kõik" option, add years
+            picker.innerHTML = '<div class="year-opt sel" onclick="setYear(\'all\')">Kõik</div>';
+            Object.keys(data).sort().reverse().forEach(y => {
+                const total = data[y].total;
+                picker.innerHTML += `<div class="year-opt" onclick="setYear('${y}')">${y} <span style="color:#6b7280">(${total})</span></div>`;
+            });
+        } catch(e) {}
+    }
+    loadYearData();
+
+    // Store markers data for year filtering
+    // This needs to be called after markers are loaded
+    function storeMarkersData(coordinates) {
+        allMarkersData = coordinates.filter(c => c.latitude && c.longitude).map(c => ({
+            lat: c.latitude, lon: c.longitude,
+            coffee_type: c.coffee_type || 'Kohv',
+            location: c.location || '', country: c.country, date: c.date,
+        }));
+    }
     </script>
 </body>
 </html>
