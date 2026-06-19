@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 
 if "DB_PATH" not in os.environ:
-    os.environ["DB_PATH"] = str(Path(__file__).parent.parent / "data" / "kohvilogi.db")
+    os.environ["DB_PATH"] = "/data/kohvilogi.db"
 DB_PATH = Path(os.environ["DB_PATH"])
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 

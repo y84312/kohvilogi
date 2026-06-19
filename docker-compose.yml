@@ -1,0 +1,10 @@
+services:
+  kohvilogi:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      - DB_PATH=/data/kohvilogi.db
+    restart: unless-stopped
