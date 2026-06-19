@@ -1,6 +1,6 @@
 # Kohvilogi
 
-CLI expense tracker - log coffee (or anything) to Airtable.
+CLI expense tracker - log coffee.
 
 ## Usage
 
@@ -15,7 +15,5 @@ kohv today
 
 ```bash
 pip install -e .
-export AIRTABLE_BASE_ID=app3sftMPNl8N7w0m
+export AIRTABLE_BASE_ID=########
 ```
-
-Airtable API key is read from `~/.hermes/.env`.
