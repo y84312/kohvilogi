@@ -1,65 +1,110 @@
 # Kohvilogi
 
-Kohvi tarbimise jälgimise veebirakendus — logi kohvi, vaata statistikat ja avasta kohvikultuur maailmas.
+[![CI](https://github.com/stennu718/kohvilogi/actions/workflows/tests.yml/badge.svg)](https://github.com/stennu718/kohvilogi/actions/workflows/tests.yml)
+[![Docker](https://github.com/stennu718/kohvilogi/actions/workflows/docker.yml/badge.svg)](https://github.com/stennu718/kohvilogi/actions/workflows/docker.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)
-![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Dashboard](docs/screenshot-dashboard.png)
+![Map](docs/screenshot-map.png)
 
-## Funktsioonid
+## Description
 
-- **Kohvi logimine** — tüüp, summa, valuuta, asukoht, riik, GPS-koordinaadid
-- **Statistika** — päevane kuu, streak, unikaalsed riigid, ilmakaare edenemine
-- **Maailmakaart** — interaktiivne kaart kohviregioonidega (27 piirkonda)
-- **Kohvipass** — jälgib millistes riikides oled kohvi joonud
-- **PWA** — installitav, offline-töötav
-- **Jagamine** — QR-koodiga jagatav kokkuvõte
+**Kohvilogi** (Estonian for "Coffee Log") is a web application for tracking your coffee consumption. Log each cup, view detailed statistics, explore coffee culture around the world on an interactive map, and share your coffee journey with others.
 
-## Kiirkäivitus
+## Features
 
-### Docker (soovitatud)
+- **Coffee Logging** — Record each coffee with type, amount, currency, location, country, and GPS coordinates
+- **Statistics Dashboard** — Daily and monthly consumption stats, streak tracking, unique countries visited, and compass progress
+- **World Map** — Interactive map visualizing coffee regions across 27 global areas
+- **Coffee Passport** — Track which countries' coffee you've tried
+- **Progressive Web App (PWA)** — Installable on mobile devices, works offline
+- **QR Code Sharing** — Generate a QR code with a summary of your coffee journey to share with friends
+
+## Quick Start
+
+### Option 1: Direct (Recommended for development)
 
 ```bash
-docker build -t kohvilogi .
-docker run -p 8000:8000 kohvilogi
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-### Käsurealt
+### Option 2: Editable install
 
 ```bash
 pip install -e .
 uvicorn app.main:app --reload
 ```
 
-Rakendus kättesaadav: http://localhost:8000
-API dokumentatsioon: http://localhost:8000/docs
+### Option 3: Docker
 
-## API
+```bash
+docker build -t kohvilogi .
+docker run -p 8000:8000 kohvilogi
+```
 
-| Endpoint | Kirjeldus |
+The application will be available at `http://localhost:8000`.
+
+## API Documentation
+
+Interactive API documentation is available at `http://localhost:8000/docs` (Swagger UI).
+
+| Endpoint | Description |
 |---|---|
-| `GET /` | Pealeht |
-| `POST /add` | Lisa kohvi kirje |
-| `POST /delete/{id}` | Kustuta kirje |
-| `GET /stats` | Kuu statistika |
-| `GET /map` | Maailmakaart |
-| `GET /api/streak` | Streak + kiired statistikud |
-| `GET /api/world` | Maailma andmed |
-| `GET /health` | Tervisekontroll |
+| `GET /` | Homepage |
+| `POST /add` | Add a coffee entry |
+| `POST /delete/{id}` | Delete an entry |
+| `GET /stats` | Monthly statistics |
+| `GET /map` | World map view |
+| `GET /api/streak` | Streak and quick stats |
+| `GET /api/world` | World data for map |
+| `GET /health` | Health check |
 
-## Testid
+## Running Tests
 
 ```bash
 pytest tests/ -v
 ```
 
-## Tehnoloogiad
+## Tech Stack
 
-- **Backend:** FastAPI + SQLite
-- **Frontend:** Jinja2 templated, PWA
-- **Andmebaas:** SQLite (aiosqlite)
-- **Deploy:** Docker
+- **Backend:** Python 3.11+, FastAPI
+- **Database:** SQLite (via aiosqlite)
+- **Frontend:** Jinja2 templates, PWA support
+- **Build System:** Hatchling
+- **Testing:** pytest with async support, coverage reporting
+- **CI/CD:** GitHub Actions
+- **Deployment:** Docker
 
-## Litsents
+## Project Structure
 
-MIT
+```
+kohvilogi/
+├── app/
+│   ├── __init__.py
+│   ├── main.py          # FastAPI application entry point
+│   ├── routes.py        # API route definitions
+│   ├── database.py      # Database connection and queries
+│   └── constants.py     # Application constants
+├── templates/           # Jinja2 HTML templates
+│   ├── index.html
+│   ├── stats.html
+│   └── world.html
+├── tests/               # Test suite
+│   ├── test_unit.py
+│   ├── test_integration.py
+│   ├── test_e2e.py
+│   ├── test_security.py
+│   └── conftest.py
+├── scripts/             # CI/CD helper scripts
+├── .github/workflows/   # GitHub Actions workflows
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+├── requirements.txt
+└── railway.toml
+```
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
