@@ -14,6 +14,16 @@
 
 ![Demo](docs/demo.gif)
 
+## Try it
+
+☕ **[Try Live Demo](https://stennu718.github.io/kohvilogi/demo/)** — log coffee, view stats, explore the API
+
+Or run locally:
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
 ## Features
 
 - **Coffee logging** — record coffee type, amount, location, country, GPS coordinates
