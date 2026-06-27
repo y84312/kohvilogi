@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Version](https://img.shields.io/github/v/release/stennu718/kohvilogi)](https://github.com/stennu718/kohvilogi/releases)
+[![Docker](https://img.shields.io/badge/Docker-Build-2496ED.svg?logo=docker&logoColor=white)](https://github.com/stennu718/kohvilogi/pkgs/container/kohvilogi)
 
 ![Coffee Map](docs/screenshot.png)
 
